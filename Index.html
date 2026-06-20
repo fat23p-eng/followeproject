@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบติดตามผลการปฏิบัติงาน 2569</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --navy:   #0f2557;
+      --blue:   #1d4ed8;
+      --sky:    #3b82f6;
+      --orange: #f97316;
+      --amber:  #fbbf24;
+      --teal:   #0d9488;
+      --rose:   #f43f5e;
+      --green:  #22c55e;
+      --bg:     #f0f4ff;
+      --sur:    #ffffff;
+      --bdr:    #dbe4f3;
+      --t1:     #0f172a;
+      --t2:     #475569;
+      --t3:     #94a3b8;
+      --font:   'IBM Plex Sans Thai', 'Sarabun', sans-serif;
+      --radius: 14px;
+      --shadow: 0 4px 24px rgba(29,78,216,0.08);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body { font-family: var(--font); background: var(--bg); color: var(--t1); font-size: 14px; }
+
+    /* ═══════════ NAVBAR ═══════════ */
+    .navbar {
+      background: linear-gradient(135deg, var(--navy) 0%, #1a3a9c 60%, var(--blue) 100%);
+      color: white;
+      padding: 0 28px;
+      height: 62px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 20px rgba(15,37,87,0.35);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .navbar-brand {
+      display: flex; align-items: center; gap: 12px;
+    }
+    .navbar-icon {
+      width: 36px; height: 36px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+    .navbar-title { font-size: 1.05rem; font-weight: 700; letter-spacing: 0.01em; }
+    .navbar-sub { font-size: 0.72rem; opacity: 0.7; margin-top: 1px; font-weight: 400; }
+    .navbar-right { display: flex; align-items: center; gap: 12px; }
+    #user-display {
+      font-size: 0.85rem; opacity: 0.9;
+      background: rgba(255,255,255,0.12);
+      padding: 6px 14px; border-radius: 20px;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+    .btn-auth {
+      background: var(--orange);
+      color: white; border: none;
+      padding: 8px 18px; border-radius: 8px;
+      font-weight: 600; font-family: var(--font);
+      cursor: pointer; font-size: 0.85rem;
+      transition: 0.2s; display: flex; align-items: center; gap: 6px;
+      box-shadow: 0 2px 8px rgba(249,115,22,0.35);
+    }
+    .btn-auth:hover { background: #ea6d0e; transform: translateY(-1px); }
+
+    /* ═══════════ LAYOUT ═══════════ */
+    .container {
+      max-width: 1400px; margin: 0 auto;
+      padding: 20px 20px 40px;
+      display: grid;
+      grid-template-columns: 330px 1fr;
+      gap: 20px;
+    }
+    .left-panel { display: flex; flex-direction: column; gap: 18px; }
+    .right-panel { display: flex; flex-direction: column; gap: 18px; }
+
+    /* ═══════════ SUMMARY CARDS ═══════════ */
+    .stats-row {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+    }
+    .stat-card {
+      background: var(--sur); border-radius: var(--radius);
+      padding: 16px 14px; border: 1px solid var(--bdr);
+      box-shadow: var(--shadow);
+      position: relative; overflow: hidden;
+    }
+    .stat-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    }
+    .stat-card.total::before { background: var(--blue); }
+    .stat-card.above::before { background: var(--green); }
+    .stat-card.below::before { background: var(--rose); }
+    .stat-num { font-size: 1.9rem; font-weight: 700; line-height: 1; }
+    .stat-card.total .stat-num { color: var(--blue); }
+    .stat-card.above .stat-num { color: var(--green); }
+    .stat-card.below .stat-num { color: var(--rose); }
+    .stat-label { font-size: 0.72rem; color: var(--t2); margin-top: 4px; font-weight: 500; }
+
+    /* ═══════════ CARD ═══════════ */
+    .card {
+      background: var(--sur); border-radius: var(--radius);
+      padding: 20px; box-shadow: var(--shadow);
+      border: 1px solid var(--bdr);
+    }
+    .card-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 16px; flex-wrap: wrap; gap: 10px;
+    }
+    .card-title {
+      font-size: 0.95rem; font-weight: 700; color: var(--navy);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .card-title .icon {
+      width: 30px; height: 30px; border-radius: 8px;
+      background: linear-gradient(135deg, var(--blue), var(--sky));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+    }
+
+    /* ═══════════ FILTER BAR ═══════════ */
+    .filter-bar {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+      padding: 14px 16px;
+      background: linear-gradient(135deg, #eef2ff, #f0f9ff);
+      border-radius: 10px; margin-bottom: 16px;
+      border: 1px solid #c7d9f7;
+    }
+    .filter-bar label {
+      font-size: 0.78rem; font-weight: 600; color: var(--t2);
+      white-space: nowrap;
+    }
+    .filter-select, .filter-input {
+      padding: 7px 12px; border: 1.5px solid #c7d9f7;
+      border-radius: 8px; font-family: var(--font);
+      font-size: 0.82rem; background: white; color: var(--t1);
+      cursor: pointer; transition: 0.2s; outline: none; min-width: 130px;
+    }
+    .filter-select:focus, .filter-input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(59,130,246,0.12); }
+    .filter-input { min-width: 160px; }
+    .btn-reset {
+      padding: 7px 14px; border: 1.5px solid #dbe4f3;
+      border-radius: 8px; font-family: var(--font); font-size: 0.8rem;
+      background: white; color: var(--t2); cursor: pointer; font-weight: 500;
+      transition: 0.2s;
+    }
+    .btn-reset:hover { background: #f1f5f9; border-color: var(--blue); color: var(--blue); }
+
+    /* ═══════════ TABLE ═══════════ */
+    .table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid var(--bdr); }
+    table { width: 100%; border-collapse: collapse; }
+    thead tr { background: linear-gradient(135deg, var(--navy), var(--blue)); }
+    th {
+      padding: 12px 14px; color: white; text-align: left;
+      font-size: 0.8rem; font-weight: 600; white-space: nowrap;
+      letter-spacing: 0.02em;
+    }
+    th:first-child { border-radius: 10px 0 0 0; }
+    th:last-child  { border-radius: 0 10px 0 0; }
+    td { padding: 11px 14px; font-size: 0.82rem; border-bottom: 1px solid #eef2fb; white-space: nowrap; }
+    tbody tr { cursor: pointer; transition: background 0.15s; }
+    tbody tr:hover td { background: #eef2ff; }
+    tbody tr:last-child td { border-bottom: none; }
+    .no-data { text-align: center; padding: 40px 20px; color: var(--t3); font-size: 0.9rem; }
+
+    /* ═══════════ BADGE / STATUS ═══════════ */
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 4px 10px; border-radius: 20px;
+      font-size: 0.72rem; font-weight: 700; white-space: nowrap;
+    }
+    .badge-below  { background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; }
+    .badge-on     { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+    .badge-above  { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+
+    /* progress bar */
+    .pct-wrap { display: flex; align-items: center; gap: 8px; }
+    .pct-bar { flex: 1; min-width: 60px; height: 5px; background: #e2e8f0; border-radius: 3px; overflow: hidden; }
+    .pct-fill { height: 100%; border-radius: 3px; transition: width 0.5s; }
+    .pct-text { font-weight: 700; font-size: 0.8rem; white-space: nowrap; }
+
+    /* ═══════════ BUTTONS ═══════════ */
+    .btn {
+      cursor: pointer; padding: 8px 16px; border: none;
+      border-radius: 8px; font-weight: 600; font-family: var(--font);
+      transition: 0.2s; display: inline-flex; align-items: center; gap: 6px;
+      font-size: 0.82rem;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--blue), var(--sky));
+      color: white; box-shadow: 0 2px 8px rgba(59,130,246,0.3);
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(59,130,246,0.4); }
+    .btn-outline {
+      background: white; color: var(--blue);
+      border: 1.5px solid var(--blue);
+    }
+    .btn-outline:hover { background: #eff6ff; }
+    .btn-icon {
+      width: 30px; height: 30px; padding: 0;
+      display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 7px; font-size: 14px; border: none; cursor: pointer;
+      transition: 0.15s;
+    }
+    .btn-edit  { background: #eff6ff; color: var(--blue); }
+    .btn-edit:hover  { background: #dbeafe; }
+    .btn-del   { background: #fff1f2; color: var(--rose); }
+    .btn-del:hover   { background: #ffe4e6; }
+    .admin-only { display: none; }
+
+    /* ═══════════ CHART CARD ═══════════ */
+    .chart-container { position: relative; height: 230px; }
+
+    /* detail card */
+    #detail-card {
+      display: none;
+      border-left: 4px solid var(--orange);
+      background: linear-gradient(135deg, #fff7ed, #fff);
+    }
+    .detail-title { font-size: 1rem; font-weight: 700; color: var(--navy); margin-bottom: 6px; }
+    .detail-pct-big {
+      font-size: 2.2rem; font-weight: 700;
+      background: linear-gradient(135deg, var(--orange), var(--amber));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      line-height: 1;
+    }
+    .detail-meta { font-size: 0.8rem; color: var(--t2); margin-top: 8px; line-height: 1.8; }
+
+    /* ═══════════ MODAL ═══════════ */
+    .modal {
+      display: none; position: fixed; inset: 0;
+      background: rgba(15,37,87,0.45); backdrop-filter: blur(4px);
+      align-items: center; justify-content: center; z-index: 200;
+    }
+    .modal-content {
+      background: white; border-radius: 18px;
+      width: 520px; max-width: 95vw; max-height: 90vh; overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(15,37,87,0.25);
+      animation: fadeUp 0.2s ease;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .modal-header {
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid var(--bdr);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .modal-title { font-size: 1rem; font-weight: 700; color: var(--navy); }
+    .modal-close { background: none; border: none; font-size: 18px; cursor: pointer; color: var(--t3); padding: 4px 8px; border-radius: 6px; }
+    .modal-close:hover { background: #f1f5f9; color: var(--t1); }
+    .modal-body { padding: 20px 24px 24px; }
+    .form-group { margin-bottom: 14px; }
+    .form-label { display: block; font-size: 0.8rem; font-weight: 700; color: var(--t2); margin-bottom: 6px; }
+    .form-control {
+      width: 100%; padding: 10px 13px;
+      border: 1.5px solid var(--bdr); border-radius: 9px;
+      font-size: 0.88rem; font-family: var(--font); color: var(--t1);
+      transition: 0.2s; outline: none; background: white;
+    }
+    .form-control:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(59,130,246,0.12); }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .modal-footer { display: flex; gap: 10px; margin-top: 18px; }
+    .modal-footer .btn { flex: 1; justify-content: center; padding: 11px; font-size: 0.88rem; }
+    .btn-cancel { background: #f1f5f9; color: var(--t2); border: none; }
+    .btn-cancel:hover { background: #e2e8f0; }
+
+    /* login modal smaller */
+    #login-modal .modal-content { width: 400px; }
+
+    /* ═══════════ TOAST ═══════════ */
+    #toast {
+      position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px);
+      background: var(--navy); color: white; padding: 12px 22px;
+      border-radius: 30px; font-size: 0.85rem; font-weight: 500;
+      opacity: 0; transition: 0.3s; z-index: 999; pointer-events: none;
+      box-shadow: 0 4px 20px rgba(15,37,87,0.3);
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    #toast.success { background: var(--teal); }
+    #toast.error   { background: var(--rose); }
+
+    /* ═══════════ LOADING ═══════════ */
+    .spinner {
+      width: 32px; height: 32px; border: 3px solid #dbeafe;
+      border-top-color: var(--blue); border-radius: 50%;
+      animation: spin 0.8s linear infinite; margin: 0 auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-row td { text-align: center; padding: 40px; }
+
+    /* ═══════════ RESPONSIVE ═══════════ */
+    @media (max-width: 900px) {
+      .container { grid-template-columns: 1fr; }
+      .stats-row { grid-template-columns: repeat(3,1fr); }
+    }
+    @media (max-width: 600px) {
+      .navbar { padding: 0 14px; }
+      .container { padding: 12px 12px 30px; gap: 14px; }
+      .stats-row { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══ NAVBAR ══ -->
+<nav class="navbar">
+  <div class="navbar-brand">
+    <div class="navbar-icon">🎯</div>
+    <div>
+      <div class="navbar-title">ระบบติดตามผลการปฏิบัติงาน</div>
+      <div class="navbar-sub">ปีงบประมาณ 2569</div>
+    </div>
+  </div>
+  <div class="navbar-right">
+    <span id="user-display">👤 โหมดผู้เยี่ยมชม</span>
+    <button class="btn-auth" id="auth-btn" onclick="handleAuthAction()">🔑 เข้าสู่ระบบ</button>
+  </div>
+</nav>
+
+<!-- ══ MAIN CONTAINER ══ -->
+<div class="container">
+
+  <!-- LEFT PANEL -->
+  <div class="left-panel">
+
+    <!-- Summary Stats -->
+    <div class="stats-row">
+      <div class="stat-card total">
+        <div class="stat-num" id="s-total">0</div>
+        <div class="stat-label">รายการทั้งหมด</div>
+      </div>
+      <div class="stat-card above">
+        <div class="stat-num" id="s-above">0</div>
+        <div class="stat-label">สูงกว่า/ตามแผน</div>
+      </div>
+      <div class="stat-card below">
+        <div class="stat-num" id="s-below">0</div>
+        <div class="stat-label">ต่ำกว่าแผน</div>
+      </div>
+    </div>
+
+    <!-- Chart -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <div class="icon">📈</div>
+          <span id="chart-title">กราฟเปรียบเทียบ แผน-ผล</span>
+        </div>
+      </div>
+      <div class="chart-container">
+        <canvas id="myChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Detail Card -->
+    <div id="detail-card" class="card">
+      <div class="detail-title" id="item-name"></div>
+      <div class="detail-pct-big" id="item-pct"></div>
+      <div class="detail-meta" id="item-stat"></div>
+      <button class="btn btn-outline" style="margin-top:14px; width:100%; justify-content:center;"
+        onclick="renderSummaryChart(filteredData)">⬅ กลับสู่กราฟภาพรวม</button>
+    </div>
+
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="right-panel">
+
+    <!-- Data Table Card -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <div class="icon">📋</div>
+          รายการปฏิบัติงาน
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-outline" onclick="renderSummaryChart(filteredData)">📊 กราฟรวม</button>
+          <button class="btn btn-primary admin-only" onclick="openDataModal()">➕ เพิ่มข้อมูล</button>
+        </div>
+      </div>
+
+      <!-- FILTER BAR -->
+      <div class="filter-bar">
+        <label>🔍 ค้นหา</label>
+        <input type="text" class="filter-input" id="f-search" placeholder="พิมพ์ชื่อแผนงาน..." oninput="applyFilter()">
+
+        <label>แผนงาน</label>
+        <select class="filter-select" id="f-filter-plan" onchange="applyFilter()">
+          <option value="">ทั้งหมด</option>
+        </select>
+
+        <label>ผู้รับผิดชอบ</label>
+        <select class="filter-select" id="f-filter-user" onchange="applyFilter()">
+          <option value="">ทั้งหมด</option>
+        </select>
+
+        <label>สถานะ</label>
+        <select class="filter-select" id="f-filter-status" onchange="applyFilter()">
+          <option value="">ทั้งหมด</option>
+          <option value="สูงกว่าแผน">สูงกว่าแผน</option>
+          <option value="ตามแผน">ตามแผน</option>
+          <option value="ต่ำกว่าแผน">ต่ำกว่าแผน</option>
+        </select>
+
+        <button class="btn-reset" onclick="resetFilter()">↺ ล้างตัวกรอง</button>
+        <span style="margin-left:auto; font-size:0.78rem; color:var(--t2);">
+          แสดง <b id="f-count">0</b> รายการ
+        </span>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>แผนงาน</th>
+              <th>หน่วย</th>
+              <th>เป้าหมาย</th>
+              <th>ผลงาน</th>
+              <th>ร้อยละ</th>
+              <th>ผู้รับผิดชอบ</th>
+              <th>สถานะ</th>
+              <th class="admin-only" style="text-align:center;">จัดการ</th>
+            </tr>
+          </thead>
+          <tbody id="table-body">
+            <tr class="loading-row"><td colspan="9"><div class="spinner"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══ TOAST ══ -->
+<div id="toast"></div>
+
+<!-- ══ LOGIN MODAL ══ -->
+<div class="modal" id="login-modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div class="modal-title">🔑 เข้าสู่ระบบ Admin</div>
+      <button class="modal-close" onclick="closeModal('login-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">ชื่อผู้ใช้ / Email</label>
+        <input type="text" id="email" class="form-control" placeholder="กรอกชื่อผู้ใช้">
+      </div>
+      <div class="form-group">
+        <label class="form-label">รหัสผ่าน</label>
+        <input type="password" id="password" class="form-control" placeholder="กรอกรหัสผ่าน"
+          onkeydown="if(event.key==='Enter') handleLogin()">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-cancel" onclick="closeModal('login-modal')">ยกเลิก</button>
+        <button class="btn btn-primary" onclick="handleLogin()">🔓 เข้าสู่ระบบ</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ DATA MODAL ══ -->
+<div class="modal" id="data-modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">📝 ข้อมูลโครงการ</div>
+      <button class="modal-close" onclick="closeModal('data-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="rowIndex">
+
+      <div class="form-group">
+        <label class="form-label">แผนงาน *</label>
+        <select id="f-แผนงาน" class="form-control">
+          <option value="">-- เลือกแผนงาน --</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">หน่วยนับ *</label>
+        <input type="text" id="f-หน่วย" class="form-control" placeholder="เช่น ราย, โครงการ, ครั้ง">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">เป้าหมาย *</label>
+          <input type="number" id="f-เป้า" class="form-control" placeholder="0" min="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">ผลงานจริง *</label>
+          <input type="number" id="f-ผล" class="form-control" placeholder="0" min="0">
+        </div>
+      </div>
+
+      <!-- Preview percentage -->
+      <div style="background:#f0f4ff; border-radius:10px; padding:12px 14px; margin-bottom:14px; display:flex; align-items:center; gap:12px;">
+        <span style="font-size:0.8rem; color:var(--t2);">ร้อยละความสำเร็จ:</span>
+        <span id="preview-pct" style="font-size:1.2rem; font-weight:700; color:var(--blue);">0.00%</span>
+        <div class="pct-bar" style="flex:1; height:8px;">
+          <div class="pct-fill" id="preview-bar" style="background:var(--blue); width:0%;"></div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">ผู้รับผิดชอบ *</label>
+        <select id="f-ผู้รับผิดชอบ" class="form-control">
+          <option value="">-- เลือกผู้รับผิดชอบ --</option>
+        </select>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-cancel" onclick="closeModal('data-modal')">ยกเลิก</button>
+        <button class="btn btn-primary" onclick="saveData()">💾 บันทึกข้อมูล</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SCRIPT ══ -->
+<script>
+  var user = null;
+  var allData = [];
+  var filteredData = [];
+  var masterData = {};
+  var chartObj = null;
+
+  // ── Init ──
+  window.onload = function() {
+    google.script.run.withSuccessHandler(function(res) {
+      masterData = res;
+      populateDropdowns();
+      buildFilterDropdowns();
+    }).getMasterData();
+    loadData();
+
+    // Live preview percentage on modal
+    document.getElementById('f-เป้า').addEventListener('input', updatePreview);
+    document.getElementById('f-ผล').addEventListener('input', updatePreview);
+  };
+
+  function updatePreview() {
+    var t = Number(document.getElementById('f-เป้า').value) || 0;
+    var a = Number(document.getElementById('f-ผล').value) || 0;
+    var pct = t > 0 ? Math.min((a / t) * 100, 999) : 0;
+    document.getElementById('preview-pct').innerText = pct.toFixed(2) + '%';
+    var barW = Math.min(pct, 100);
+    document.getElementById('preview-bar').style.width = barW + '%';
+    var color = pct < 100 ? '#f43f5e' : (pct === 100 ? '#22c55e' : '#1d4ed8');
+    document.getElementById('preview-bar').style.background = color;
+    document.getElementById('preview-pct').style.color = color;
+  }
+
+  // ── Load Data ──
+  function loadData() {
+    document.getElementById('table-body').innerHTML =
+      '<tr class="loading-row"><td colspan="9"><div class="spinner"></div></td></tr>';
+    google.script.run.withSuccessHandler(function(data) {
+      allData = data;
+      filteredData = data;
+      applyFilter();
+      renderSummaryChart(data);
+      updateStats(data);
+    }).getAllData();
+  }
+
+  // ── Stats ──
+  function updateStats(data) {
+    document.getElementById('s-total').innerText = data.length;
+    var above = data.filter(function(r) { return r['สถานะ'] !== 'ต่ำกว่าแผน'; }).length;
+    var below = data.length - above;
+    document.getElementById('s-above').innerText = above;
+    document.getElementById('s-below').innerText = below;
+  }
+
+  // ── Build Filter Dropdowns from data ──
+  function buildFilterDropdowns() {
+    // ผู้รับผิดชอบ from masterData
+    if (masterData['ผู้รับผิดชอบ']) {
+      var sel = document.getElementById('f-filter-user');
+      masterData['ผู้รับผิดชอบ'].forEach(function(v) {
+        sel.innerHTML += '<option value="'+v+'">'+v+'</option>';
+      });
+    }
+    if (masterData['แผนงาน']) {
+      var sel2 = document.getElementById('f-filter-plan');
+      masterData['แผนงาน'].forEach(function(v) {
+        sel2.innerHTML += '<option value="'+v+'">'+v+'</option>';
+      });
+    }
+  }
+
+  // ── Filter ──
+  function applyFilter() {
+    var search = document.getElementById('f-search').value.toLowerCase().trim();
+    var plan   = document.getElementById('f-filter-plan').value;
+    var uname  = document.getElementById('f-filter-user').value;
+    var status = document.getElementById('f-filter-status').value;
+
+    filteredData = allData.filter(function(r) {
+      if (search && !String(r['แผนงาน']).toLowerCase().includes(search)) return false;
+      if (plan   && r['แผนงาน'] !== plan)   return false;
+      if (uname  && r['ผู้รับผิดชอบ'] !== uname) return false;
+      if (status && r['สถานะ'] !== status)   return false;
+      return true;
+    });
+
+    document.getElementById('f-count').innerText = filteredData.length;
+    renderTable(filteredData);
+    updateStats(filteredData);
+  }
+
+  function resetFilter() {
+    document.getElementById('f-search').value = '';
+    document.getElementById('f-filter-plan').value = '';
+    document.getElementById('f-filter-user').value = '';
+    document.getElementById('f-filter-status').value = '';
+    applyFilter();
+  }
+
+  // ── Summary Chart ──
+  function renderSummaryChart(data) {
+    document.getElementById('detail-card').style.display = 'none';
+    document.getElementById('chart-title').innerText = 'กราฟเปรียบเทียบ แผน-ผล';
+    var ctx = document.getElementById('myChart').getContext('2d');
+    if (chartObj) chartObj.destroy();
+
+    var labels  = data.map(function(r) { return r['แผนงาน']; });
+    var plans   = data.map(function(r) { return Number(r['เป้า']) || 0; });
+    var actuals = data.map(function(r) { return Number(r['ผล'])  || 0; });
+
+    chartObj = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'เป้าหมาย',
+            data: plans,
+            backgroundColor: 'rgba(29,78,216,0.85)',
+            borderRadius: 5,
+            borderSkipped: false,
+            barPercentage: 0.45
+          },
+          {
+            label: 'ผลงานจริง',
+            data: actuals,
+            backgroundColor: 'rgba(249,115,22,0.85)',
+            borderRadius: 5,
+            borderSkipped: false,
+            barPercentage: 0.45
+          }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 }, padding: 14 } },
+          tooltip: { callbacks: {
+            label: function(c) { return ' '+c.dataset.label+': '+c.raw.toLocaleString(); }
+          }}
+        },
+        scales: {
+          x: { ticks: { display: labels.length <= 10, maxRotation: 30, font: { size: 10 } }, grid: { display: false } },
+          y: { beginAtZero: true, ticks: { font: { size: 10 } }, grid: { color: '#eef2f7' } }
+        }
+      }
+    });
+  }
+
+  // ── Detail Chart ──
+  function showDetail(idx) {
+    var row = allData.find(function(r) { return r._rowIndex === idx; });
+    if (!row) return;
+    document.getElementById('chart-title').innerText = 'รายละเอียด: ' + row['แผนงาน'];
+    var ctx = document.getElementById('myChart').getContext('2d');
+    if (chartObj) chartObj.destroy();
+    chartObj = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['ผลงานจริง', 'คงเหลือ'],
+        datasets: [{
+          data: [
+            Math.min(Number(row['ผล']), Number(row['เป้า'])),
+            Math.max(Number(row['เป้า']) - Number(row['ผล']), 0)
+          ],
+          backgroundColor: ['#1d4ed8','#e2e8f0'],
+          borderWidth: 0,
+          hoverOffset: 4
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '65%',
+        plugins: {
+          legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } }
+        }
+      }
+    });
+    var pct = Number(row['ร้อยละ']) || 0;
+    document.getElementById('detail-card').style.display = 'block';
+    document.getElementById('item-name').innerText = row['แผนงาน'];
+    document.getElementById('item-pct').innerText = pct.toFixed(2) + '%';
+    document.getElementById('item-stat').innerHTML =
+      'เป้าหมาย: <b>'+Number(row['เป้า']).toLocaleString()+' '+row['หน่วย']+'</b><br>' +
+      'ผลงานจริง: <b>'+Number(row['ผล']).toLocaleString()+' '+row['หน่วย']+'</b><br>' +
+      'ผู้รับผิดชอบ: '+row['ผู้รับผิดชอบ']+'<br>' +
+      'สถานะ: '+badgeHTML(row['สถานะ']);
+  }
+
+  // ── Render Table ──
+  function renderTable(data) {
+    if (!data.length) {
+      document.getElementById('table-body').innerHTML =
+        '<tr><td colspan="9" class="no-data">📭 ไม่พบข้อมูล</td></tr>';
+      return;
+    }
+    var isAdmin = user && user.role === 'Admin';
+    var html = '';
+    data.forEach(function(r, i) {
+      var pct = Number(r['ร้อยละ']) || 0;
+      var barColor = pct < 100 ? '#f43f5e' : (pct === 100 ? '#22c55e' : '#1d4ed8');
+      var barW = Math.min(pct, 100);
+      html += '<tr onclick="showDetail('+r._rowIndex+')">' +
+        '<td style="color:var(--t3); font-weight:600;">'+(i+1)+'</td>' +
+        '<td style="font-weight:600; color:var(--navy); max-width:180px; overflow:hidden; text-overflow:ellipsis;">'+r['แผนงาน']+'</td>' +
+        '<td style="color:var(--t2);">'+r['หน่วย']+'</td>' +
+        '<td style="font-weight:600;">'+Number(r['เป้า']).toLocaleString()+'</td>' +
+        '<td style="font-weight:600; color:var(--orange);">'+Number(r['ผล']).toLocaleString()+'</td>' +
+        '<td>' +
+          '<div class="pct-wrap">' +
+            '<div class="pct-bar"><div class="pct-fill" style="background:'+barColor+'; width:'+barW+'%;"></div></div>' +
+            '<span class="pct-text" style="color:'+barColor+';">'+pct.toFixed(1)+'%</span>' +
+          '</div>' +
+        '</td>' +
+        '<td>'+r['ผู้รับผิดชอบ']+'</td>' +
+        '<td>'+badgeHTML(r['สถานะ'])+'</td>';
+      if (isAdmin) {
+        html += '<td style="text-align:center;">' +
+          '<button class="btn-icon btn-edit" onclick="event.stopPropagation(); editRow('+r._rowIndex+')" title="แก้ไข">✏️</button> ' +
+          '<button class="btn-icon btn-del"  onclick="event.stopPropagation(); deleteRow('+r._rowIndex+')" title="ลบ">🗑️</button>' +
+          '</td>';
+      }
+      html += '</tr>';
+    });
+    document.getElementById('table-body').innerHTML = html;
+  }
+
+  function badgeHTML(status) {
+    var cls = status === 'ต่ำกว่าแผน' ? 'badge-below' : (status === 'ตามแผน' ? 'badge-on' : 'badge-above');
+    var icon = status === 'ต่ำกว่าแผน' ? '▼' : (status === 'ตามแผน' ? '●' : '▲');
+    return '<span class="badge '+cls+'">'+icon+' '+status+'</span>';
+  }
+
+  // ── Populate Form Dropdowns ──
+  function populateDropdowns() {
+    for (var cat in masterData) {
+      var el = document.getElementById('f-' + cat);
+      if (el) {
+        el.innerHTML = '<option value="">-- เลือก '+cat+' --</option>' +
+          masterData[cat].map(function(v) { return '<option value="'+v+'">'+v+'</option>'; }).join('');
+      }
+    }
+  }
+
+  // ── Auth ──
+  function handleAuthAction() {
+    if (user) {
+      user = null;
+      document.getElementById('user-display').innerText = '👤 โหมดผู้เยี่ยมชม';
+      document.getElementById('auth-btn').innerText = '🔑 เข้าสู่ระบบ';
+      document.getElementById('auth-btn').style.background = '';
+      toggleAdminUI(false);
+      loadData();
+      showToast('ออกจากระบบแล้ว', 'success');
+    } else {
+      document.getElementById('login-modal').style.display = 'flex';
+    }
+  }
+
+  function handleLogin() {
+    var email = document.getElementById('email').value.trim();
+    var pass  = document.getElementById('password').value.trim();
+    if (!email || !pass) { showToast('กรุณากรอกข้อมูลให้ครบ', 'error'); return; }
+    google.script.run.withSuccessHandler(function(res) {
+      if (res.success) {
+        user = res;
+        document.getElementById('user-display').innerText = '👤 ' + res.name + ' (' + res.role + ')';
+        document.getElementById('auth-btn').innerText = '🚪 ออกจากระบบ';
+        document.getElementById('auth-btn').style.background = '#475569';
+        toggleAdminUI(true);
+        closeModal('login-modal');
+        document.getElementById('email').value = '';
+        document.getElementById('password').value = '';
+        loadData();
+        showToast('เข้าสู่ระบบสำเร็จ ยินดีต้อนรับ ' + res.name, 'success');
+      } else {
+        showToast(res.message || 'เข้าสู่ระบบไม่สำเร็จ', 'error');
+      }
+    }).login(email, pass);
+  }
+
+  function toggleAdminUI(show) {
+    document.querySelectorAll('.admin-only').forEach(function(el) {
+      el.style.display = show ? (el.tagName === 'TH' ? 'table-cell' : 'inline-flex') : 'none';
+    });
+  }
+
+  // ── CRUD ──
+  function openDataModal() {
+    document.getElementById('rowIndex').value = '';
+    document.getElementById('modal-title').innerText = '➕ เพิ่มโครงการใหม่';
+    document.getElementById('f-แผนงาน').selectedIndex = 0;
+    document.getElementById('f-หน่วย').value = '';
+    document.getElementById('f-เป้า').value = '';
+    document.getElementById('f-ผล').value = '';
+    document.getElementById('f-ผู้รับผิดชอบ').selectedIndex = 0;
+    document.getElementById('preview-pct').innerText = '0.00%';
+    document.getElementById('preview-bar').style.width = '0%';
+    document.getElementById('data-modal').style.display = 'flex';
+  }
+
+  function editRow(idx) {
+    var row = allData.find(function(r) { return r._rowIndex === idx; });
+    if (!row) return;
+    document.getElementById('rowIndex').value = idx;
+    document.getElementById('modal-title').innerText = '✏️ แก้ไข: ' + row['แผนงาน'];
+
+    var selPlan = document.getElementById('f-แผนงาน');
+    if (!Array.from(selPlan.options).some(function(o) { return o.value === row['แผนงาน']; })) {
+      var opt = document.createElement('option');
+      opt.value = row['แผนงาน']; opt.text = row['แผนงาน'];
+      selPlan.add(opt, 1);
+    }
+    selPlan.value = row['แผนงาน'];
+    document.getElementById('f-หน่วย').value = row['หน่วย'];
+    document.getElementById('f-เป้า').value  = row['เป้า'];
+    document.getElementById('f-ผล').value    = row['ผล'];
+
+    var selUser = document.getElementById('f-ผู้รับผิดชอบ');
+    if (!Array.from(selUser.options).some(function(o) { return o.value === row['ผู้รับผิดชอบ']; })) {
+      var opt2 = document.createElement('option');
+      opt2.value = row['ผู้รับผิดชอบ']; opt2.text = row['ผู้รับผิดชอบ'];
+      selUser.add(opt2, 1);
+    }
+    selUser.value = row['ผู้รับผิดชอบ'];
+    updatePreview();
+    document.getElementById('data-modal').style.display = 'flex';
+  }
+
+  function saveData() {
+    var plan = document.getElementById('f-แผนงาน').value;
+    var unit = document.getElementById('f-หน่วย').value.trim();
+    var tgt  = document.getElementById('f-เป้า').value;
+    var act  = document.getElementById('f-ผล').value;
+    var resp = document.getElementById('f-ผู้รับผิดชอบ').value;
+
+    if (!plan || !unit || tgt === '' || act === '' || !resp) {
+      showToast('กรุณากรอกข้อมูลให้ครบทุกช่อง', 'error'); return;
+    }
+
+    var data = {
+      _rowIndex: document.getElementById('rowIndex').value,
+      'แผนงาน': plan, 'หน่วย': unit,
+      'เป้า': tgt, 'ผล': act,
+      'ผู้รับผิดชอบ': resp
+    };
+    google.script.run.withSuccessHandler(function(res) {
+      if (res && res.success === false) { showToast(res.message, 'error'); return; }
+      closeModal('data-modal');
+      loadData();
+      showToast('บันทึกข้อมูลสำเร็จ ✓', 'success');
+    }).saveData(data, user.role);
+  }
+
+  function deleteRow(idx) {
+    if (!confirm('ต้องการลบข้อมูลนี้ใช่หรือไม่?')) return;
+    google.script.run.withSuccessHandler(function(res) {
+      if (res && res.success === false) { showToast(res.message, 'error'); return; }
+      loadData();
+      showToast('ลบข้อมูลแล้ว', 'success');
+    }).deleteData(idx, user.role);
+  }
+
+  function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+  // ── Toast ──
+  function showToast(msg, type) {
+    var t = document.getElementById('toast');
+    t.innerText = msg;
+    t.className = 'show ' + (type || '');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(function() { t.className = ''; }, 3000);
+  }
+
+  // Close modal on backdrop click
+  document.querySelectorAll('.modal').forEach(function(m) {
+    m.addEventListener('click', function(e) {
+      if (e.target === m) closeModal(m.id);
+    });
+  });
+</script>
+</body>
+</html>
